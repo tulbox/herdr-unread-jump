@@ -1,0 +1,11 @@
+id = "to4iki.unread-jump"
+name = "Unread Jump"
+version = "0.1.0"
+min_herdr_version = "0.7.0"
+description = "Focus the next agent pane that needs attention (blocked, then done)."
+platforms = ["linux", "macos"]
+
+[[actions]]
+id = "next"
+title = "Jump to next unread agent"
+command = ["bash", "next.sh"]
