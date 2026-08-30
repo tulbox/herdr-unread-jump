@@ -1,31 +1,25 @@
 # herdr-unread-jump
 
-Focus the next Herdr agent pane that needs attention. Agents in `blocked`
-take priority over `done`. Running the action repeatedly cycles within the
-prioritized group.
+Jump to the next Herdr agent pane that needs attention.
+
+1. List agents via `herdr agent list`
+2. Prefer `agent_status == "blocked"`, else `"done"`
+3. Focus the next pane in that group (wraps around)
 
 ## Requirements
 
-- [Herdr](https://herdr.dev/) `>= 0.7.0`
+- [Herdr](https://herdr.dev/) `>= 0.7.5`
 - [`jq`](https://jqlang.github.io/jq/)
 
 ## Install
 
-Local development:
+Install the plugin from GitHub:
 
-```sh
-herdr plugin link .
-```
-
-From GitHub once published:
-
-```sh
+```bash
 herdr plugin install to4iki/herdr-unread-jump
 ```
 
-## Keybinding
-
-Bind the action in `~/.config/herdr/config.toml`:
+Add a keybinding to your Herdr config:
 
 ```toml
 [[keys.command]]
@@ -35,14 +29,20 @@ command = "to4iki.unread-jump.next"
 description = "focus next unread agent"
 ```
 
-Invoke manually:
+Reload Herdr:
 
-```sh
-herdr plugin action invoke to4iki.unread-jump.next
+```bash
+herdr server reload-config
 ```
 
-## Behavior
+Then press `prefix+u` to jump to the next unread agent.
 
-1. List agents via `herdr agent list`
-2. Prefer panes with `agent_status == "blocked"`, else `"done"`
-3. Focus the next pane in that group (wraps around)
+## Development
+
+```bash
+herdr plugin link .
+```
+
+## License
+
+MIT

@@ -6,52 +6,41 @@ set -euo pipefail
 
 herdr_bin="${HERDR_BIN_PATH:-herdr}"
 
-if ! command -v jq >/dev/null 2>&1; then
-  echo "unread-jump: jq is required" >&2
-  exit 1
-fi
+AGENTS_JSON=$("$herdr_bin" agent list)
 
-agents_json=$("$herdr_bin" agent list)
-
-pane_ids=()
-status=""
-for candidate in blocked done; do
-  pane_ids=()
+PANE_IDS=()
+for status in blocked done; do
+  PANE_IDS=()
   while IFS= read -r id; do
     [[ -n "$id" ]] || continue
-    pane_ids+=("$id")
+    PANE_IDS+=("$id")
   done < <(
-    jq -r --arg status "$candidate" '
+    jq -r --arg status "$status" '
       .result.agents[]
       | select(.agent_status == $status)
       | .name // .pane_id
-    ' <<<"$agents_json"
+    ' <<<"$AGENTS_JSON"
   )
-  if ((${#pane_ids[@]} > 0)); then
-    status=$candidate
+  if ((${#PANE_IDS[@]} > 0)); then
     break
   fi
 done
 
-if ((${#pane_ids[@]} == 0)); then
-  echo "unread-jump: no blocked or unread agent panes" >&2
+if ((${#PANE_IDS[@]} == 0)); then
+  echo "herdr-unread: no blocked or unread agent panes" >&2
   exit 1
 fi
 
-current=$(jq -r '
-  .result.agents[]
-  | select(.focused == true)
-  | .name // .pane_id
-' <<<"$agents_json")
+CURRENT=$(jq -r '.result.agents[] | select(.focused == true) | .name // .pane_id' <<<"$AGENTS_JSON")
 
-next_index=0
-for i in "${!pane_ids[@]}"; do
-  if [[ "${pane_ids[$i]}" == "$current" ]]; then
-    next_index=$(( (i + 1) % ${#pane_ids[@]} ))
+NEXT_INDEX=0
+for i in "${!PANE_IDS[@]}"; do
+  if [[ "${PANE_IDS[$i]}" == "$CURRENT" ]]; then
+    NEXT_INDEX=$(( (i + 1) % ${#PANE_IDS[@]} ))
     break
   fi
 done
 
-target=${pane_ids[$next_index]}
-"$herdr_bin" agent focus "$target" >/dev/null
-echo "unread-jump: focused $target ($status $((next_index + 1))/${#pane_ids[@]})"
+TARGET=${PANE_IDS[$NEXT_INDEX]}
+"$herdr_bin" agent focus "$TARGET" >/dev/null
+echo "herdr-unread: focused $TARGET ($status $((NEXT_INDEX + 1))/${#PANE_IDS[@]})"
