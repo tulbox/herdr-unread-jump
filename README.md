@@ -3,8 +3,9 @@
 Jump to the next Herdr agent pane that needs attention.
 
 1. List agents via `herdr agent list`
-2. Prefer `agent_status == "blocked"`, else `"done"`
-3. Focus the next pane in that group (wraps around)
+2. Prefer `agent_status == "blocked"`, else `"done"`, else `"working"`
+3. Nothing matches: show a Herdr notification and exit 1
+4. Focus the next pane in that group (wraps around)
 
 ## Requirements
 
