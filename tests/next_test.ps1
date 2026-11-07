@@ -45,5 +45,6 @@ Check 'only current pane -> none' p1 @((A p1 working)) none
 Check 'tier holding only current falls through' p1 @((A p1 blocked), (A p2 idle 4)) p2
 Check 'context beats server focused flag' p2 @((A p1 done 1 0 $true), (A p2 done 2)) p1
 Check 'no agents -> none' p1 @() none
+Check 'idle falls back to state_change_seq' p1 @((A p1 working), @{ pane_id = 'p2'; agent_status = 'idle'; state_change_seq = 3 }, @{ pane_id = 'p3'; agent_status = 'idle'; state_change_seq = 7 }) p3
 
 exit $script:fail

@@ -26,8 +26,10 @@ tier_ids() {
       elif $tier == "done" then
         [$a[] | select(.agent_status == "done")] | sort_by(-(.completion_seq // 0))
       elif $tier == "idle" then
-        [$a[] | select(.agent_status == "idle" and (.completion_seq // 0) > 0)]
-        | sort_by(-.completion_seq)
+        # herdr 0.9.4 omits completion_seq; the last state change stands in.
+        [$a[] | select(.agent_status == "idle") | .k = (.completion_seq // .state_change_seq // 0)
+          | select(.k > 0)]
+        | sort_by(-.k)
       else
         [$a[] | select(.agent_status == "working")]
       end

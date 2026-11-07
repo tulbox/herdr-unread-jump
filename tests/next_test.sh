@@ -45,5 +45,6 @@ check "only current pane -> none" p1 "[$(a p1 working)]" none
 check "tier holding only current falls through" p1 "[$(a p1 blocked),$(a p2 idle 4)]" p2
 check "context beats server focused flag" p2 "[$(a p1 done 1 0 true),$(a p2 done 2)]" p1
 check "no agents -> none" p1 "[]" none
+check "idle falls back to state_change_seq" p1 "[$(a p1 working),{\"pane_id\":\"p2\",\"agent_status\":\"idle\",\"state_change_seq\":3},{\"pane_id\":\"p3\",\"agent_status\":\"idle\",\"state_change_seq\":7}]" p3
 
 exit $fail

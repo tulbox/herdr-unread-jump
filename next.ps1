@@ -15,13 +15,15 @@ if (-not $current) { $current = $env:HERDR_PANE_ID }
 if (-not $current) { $current = ($agents | Where-Object { $_.focused } | Select-Object -First 1).pane_id }
 
 function Seq($agent, $field) { if ($agent.$field) { [long]$agent.$field } else { 0 } }
+function IdleKey($agent) { if ($null -ne $agent.completion_seq) { Seq $agent 'completion_seq' } else { Seq $agent 'state_change_seq' } }
 
 # Pane ids for a tier, in cycle order.
 function Get-TierIds($tier) {
   $picked = switch ($tier) {
     'blocked' { $agents | Where-Object { $_.agent_status -eq 'blocked' } | Sort-Object { Seq $_ 'state_change_seq' } -Descending }
     'done'    { $agents | Where-Object { $_.agent_status -eq 'done' } | Sort-Object { Seq $_ 'completion_seq' } -Descending }
-    'idle'    { $agents | Where-Object { $_.agent_status -eq 'idle' -and (Seq $_ 'completion_seq') -gt 0 } | Sort-Object { Seq $_ 'completion_seq' } -Descending }
+    # herdr 0.9.4 omits completion_seq; the last state change stands in.
+    'idle'    { $agents | Where-Object { $_.agent_status -eq 'idle' -and (IdleKey $_) -gt 0 } | Sort-Object { IdleKey $_ } -Descending }
     'working' { $agents | Where-Object { $_.agent_status -eq 'working' } }
   }
   @($picked | ForEach-Object { $_.pane_id })
