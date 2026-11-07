@@ -1,48 +1,68 @@
 #!/usr/bin/env bash
 # Focus the next herdr agent pane that needs attention.
-# Priority: blocked > done > working. Repeatedly running cycles
-# within the prioritized group.
+# Tiers: blocked > done > idle (most recently finished first) > working.
+# The first tier holding a pane other than the current one wins; repeated
+# presses cycle within it. The current pane is never the target.
 set -euo pipefail
 
 herdr_bin="${HERDR_BIN_PATH:-herdr}"
 
 AGENTS_JSON=$("$herdr_bin" agent list)
 
-PANE_IDS=()
-for status in blocked done working; do
-  PANE_IDS=()
+# The invoking client's pane; the server's `focused` flag may belong to
+# another client, so it is the last resort.
+CURRENT=$(jq -r '.focused_pane_id // empty' <<<"${HERDR_PLUGIN_CONTEXT_JSON:-}" 2>/dev/null || true)
+CURRENT=${CURRENT:-${HERDR_PANE_ID:-}}
+if [[ -z "$CURRENT" ]]; then
+  CURRENT=$(jq -r '[.result.agents[] | select(.focused == true) | .pane_id][0] // empty' <<<"$AGENTS_JSON")
+fi
+
+# Pane ids for a tier, in cycle order.
+tier_ids() {
+  jq -r --arg tier "$1" '
+    .result.agents as $a
+    | if $tier == "blocked" then
+        [$a[] | select(.agent_status == "blocked")] | sort_by(-(.state_change_seq // 0))
+      elif $tier == "done" then
+        [$a[] | select(.agent_status == "done")] | sort_by(-(.completion_seq // 0))
+      elif $tier == "idle" then
+        [$a[] | select(.agent_status == "idle" and (.completion_seq // 0) > 0)]
+        | sort_by(-.completion_seq)
+      else
+        [$a[] | select(.agent_status == "working")]
+      end
+    | .[].pane_id
+  ' <<<"$AGENTS_JSON"
+}
+
+TARGET=""
+for tier in blocked done idle working; do
+  IDS=()
   while IFS= read -r id; do
-    [[ -n "$id" ]] || continue
-    PANE_IDS+=("$id")
-  done < <(
-    jq -r --arg status "$status" '
-      .result.agents[]
-      | select(.agent_status == $status)
-      | .name // .pane_id
-    ' <<<"$AGENTS_JSON"
-  )
-  if ((${#PANE_IDS[@]} > 0)); then
+    [[ -n "$id" ]] && IDS+=("$id")
+  done < <(tier_ids "$tier")
+  ((${#IDS[@]} > 0)) || continue
+
+  # Step past the current pane if it sits in this tier; else take the first.
+  NEXT=0
+  for i in "${!IDS[@]}"; do
+    if [[ "${IDS[$i]}" == "$CURRENT" ]]; then
+      NEXT=$(( (i + 1) % ${#IDS[@]} ))
+      break
+    fi
+  done
+  if [[ "${IDS[$NEXT]}" != "$CURRENT" ]]; then
+    TARGET=${IDS[$NEXT]}
     break
   fi
 done
 
-if ((${#PANE_IDS[@]} == 0)); then
-  echo "herdr-unread: no blocked, unread, or working agent panes" >&2
+if [[ -z "$TARGET" ]]; then
+  echo "herdr-unread: no other agent pane needs attention" >&2
   "$herdr_bin" notification show "No agents need attention" \
-    --body "Nothing blocked, unread, or working." --sound none >/dev/null 2>&1 || true
+    --body "Nothing blocked, done, finished, or working elsewhere." --sound none >/dev/null 2>&1 || true
   exit 1
 fi
 
-CURRENT=$(jq -r '.result.agents[] | select(.focused == true) | .name // .pane_id' <<<"$AGENTS_JSON")
-
-NEXT_INDEX=0
-for i in "${!PANE_IDS[@]}"; do
-  if [[ "${PANE_IDS[$i]}" == "$CURRENT" ]]; then
-    NEXT_INDEX=$(( (i + 1) % ${#PANE_IDS[@]} ))
-    break
-  fi
-done
-
-TARGET=${PANE_IDS[$NEXT_INDEX]}
 "$herdr_bin" agent focus "$TARGET" >/dev/null
-echo "herdr-unread: focused $TARGET ($status $((NEXT_INDEX + 1))/${#PANE_IDS[@]})"
+echo "herdr-unread: focused $TARGET ($tier)"

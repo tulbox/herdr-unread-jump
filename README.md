@@ -2,10 +2,18 @@
 
 Jump to the next Herdr agent pane that needs attention.
 
-1. List agents via `herdr agent list`
-2. Prefer `agent_status == "blocked"`, else `"done"`, else `"working"`
-3. Nothing matches: show a Herdr notification and exit 1
-4. Focus the next pane in that group (wraps around)
+1. List agents via `herdr agent list`.
+2. Tiers: `blocked`, then `done`, then `idle` agents that have finished a turn (most recent `completion_seq` first), then `working`.
+3. Take the first tier holding a pane other than the invoking one; repeated presses cycle within it. The current pane is never the target.
+4. Nothing matches: show a Herdr notification and exit 1.
+
+The `idle` tier exists because the server marks a completion seen once focused, so most finished agents report `idle`, not `done`; Done badges in the TUI are tracked per client.
+
+## Tests
+
+```bash
+bash tests/next_test.sh
+```
 
 ## Requirements
 
