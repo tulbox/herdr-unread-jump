@@ -3,9 +3,20 @@ name = "Unread Jump"
 version = "0.1.0"
 min_herdr_version = "0.7.5"
 description = "Focus the next agent pane that needs attention (blocked, done, recently finished, then working)."
-platforms = ["linux", "macos"]
+platforms = ["linux", "macos", "windows"]
 
+# herdr rejects duplicate action ids even across platforms, so Windows gets
+# its own id; bind `to4iki.unread-jump.next-windows` there.
 [[actions]]
 id = "next"
 title = "Jump to next unread agent"
+platforms = ["linux", "macos"]
 command = ["bash", "next.sh"]
+
+# Windows: locate the script via HERDR_PLUGIN_ROOT (minus the `\\?\` verbatim
+# prefix) rather than trusting the process cwd.
+[[actions]]
+id = "next-windows"
+title = "Jump to next unread agent"
+platforms = ["windows"]
+command = ["powershell", "-NoProfile", "-ExecutionPolicy", "Bypass", "-Command", "$r=$env:HERDR_PLUGIN_ROOT; if($r.StartsWith('\\\\?\\')){$r=$r.Substring(4)}; & (Join-Path $r 'next.ps1'); exit $LASTEXITCODE"]

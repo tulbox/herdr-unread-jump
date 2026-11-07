@@ -12,20 +12,22 @@ The `idle` tier exists because the server marks a completion seen once focused, 
 ## Tests
 
 ```bash
-bash tests/next_test.sh
+bash tests/next_test.sh                                   # macOS/Linux
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/next_test.ps1   # Windows
 ```
 
 ## Requirements
 
 - [Herdr](https://herdr.dev/) `>= 0.7.5`
-- [`jq`](https://jqlang.github.io/jq/)
+- macOS/Linux: `bash`, [`jq`](https://jqlang.github.io/jq/)
+- Windows: Windows PowerShell 5.1+ (no `jq`)
 
 ## Install
 
 Install the plugin from GitHub:
 
 ```bash
-herdr plugin install to4iki/herdr-unread-jump
+herdr plugin install tulbox/herdr-unread-jump
 ```
 
 Add a keybinding to your Herdr config:
@@ -36,6 +38,12 @@ key = "prefix+u"
 type = "plugin_action"
 command = "to4iki.unread-jump.next"
 description = "focus next unread agent"
+```
+
+On Windows, bind the `next-windows` action instead (herdr rejects duplicate action ids, even across platforms):
+
+```toml
+command = "to4iki.unread-jump.next-windows"
 ```
 
 Reload Herdr:
